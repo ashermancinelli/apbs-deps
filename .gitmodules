@@ -1,0 +1,15 @@
+[submodule "geoflow_c"]
+	path = geoflow_c
+	url = https://github.com/Electrostatics/geoflow_c
+[submodule "FETK"]
+	path = FETK
+	url = https://github.com/Electrostatics/FETK.git
+[submodule "pb_solvers"]
+	path = pb_solvers
+	url = https://github.com/Electrostatics/pb_solvers
+[submodule "TABIPB"]
+	path = TABIPB
+	url = https://github.com/Electrostatics/TABIPB.git
+[submodule "pybind11"]
+	path = pybind11
+	url = https://github.com/pybind/pybind11
