@@ -20,10 +20,17 @@ binname=$(basename "$0")
 
 source shell/__init.sh
 
+# set root directory so we can use global paths later on
 root=$(__realpath "$(dirname "$0")")
+
+# Ensure that build.sh is not running in two instances
+# trap handler will clean this up
+global_lockfile=$(__realpath ./$binname.lock)
+touch $global_lockfile
 
 export binname
 export root
+export global_lockfile
 
 __msg 'Running from root directory ' "$root"
 

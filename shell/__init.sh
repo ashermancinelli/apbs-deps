@@ -5,6 +5,15 @@ __msg()
   echo "($binname) -- $*"
 }
 
+__warn()
+{
+  __msg [Warning]
+  while read line; do
+    __msg [Warning] $line
+  done
+  __msg [Warning]
+}
+
 # Trap handler
 # Prints exit code if not 0
 __cleanup()
@@ -14,6 +23,20 @@ __cleanup()
   then
     __msg 'Got exit code: ' $rc
   fi
+  __msg Removing lock $global_lockfile
+  [ -f $global_lockfile ] && rm $global_lockfile
+
+  echo '
+  If you were installing FETK and something failed or you cancelled 
+  the job, you may have to restore the original build script from the
+  backup.
+  
+  You most likely just have to run:
+
+  mv FETK/fetk-build.bk FETK/fetk-build
+
+  from the root directory of this repo.' | __warn
+
 }
 
 trap __cleanup 0 SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM

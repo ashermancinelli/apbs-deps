@@ -37,7 +37,6 @@ cat >>/dev/null <<EOD
 
   Each install function should be responsible for the following:
     
-    - Not using any unset variables passed in from the top-level build script
     - Checking that the library has not already been installed
     - pulling any other sources needed by the library
     - documenting any of it's dependencies
@@ -47,7 +46,7 @@ EOD
 install_eigen3()
 {
   local eigen="eigen-3.3.7"
-  export default_cmake_args="$default_cmake_args -DEigen3_DIR=$(__realpath $eigen)"
+  export default_cmake_args="$default_cmake_args -DEigen3_DIR=$installdir"
 
   __check_lock ${FUNCNAME[0]}
   if [ "$installed" == "1" ]; then
@@ -57,6 +56,9 @@ install_eigen3()
   [ -f "$eigen.tar.gz" ] || \
     wget "https://gitlab.com/libeigen/eigen/-/archive/${eigen/eigen-/}/$eigen.tar.gz"
   tar xvzf "$eigen.tar.gz"
+  pushd $eigen
+  cp -r unsupported $installdir/include/unsupported
+  cp -r Eigen $installdir/include/Eigen
 
   __lock ${FUNCNAME[0]}
   __msg ${FUNCNAME[0]} successfully ran
@@ -71,14 +73,18 @@ install_FETK()
 
   pushd $root/FETK
 
-  __msg 'Manually setting FETK install directory'
-  sed -i.bk "s@^FETK_PREFIX=@FETK_PREFIX=$installdir #@" ./fetk-build
-
-  __msg 'Manually setting FETK make command'
-  sed -i.bk "s@^FETK_MAKE=@FETK_MAKE='make -j $make_jobs' #@" ./fetk-build
+  __msg Manually setting variables in FETK build script
+  sed -i.bk \
+    -e "s@^FETK_PREFIX=@FETK_PREFIX=$installdir #@" \
+    -e "s@^FETK_MAKE=@FETK_MAKE='make -j $make_jobs' #@" ./fetk-build
 
   __msg Running FETK build script without confirmation
   yes | ./fetk-build all
+
+  __msg Restoring original build script.
+  __msg You can find the modified build script at $(pwd)/fetk-build.bk
+  rm ./fetk-build
+  mv ./fetk-build.bk ./fetk-build
 
   popd
 
