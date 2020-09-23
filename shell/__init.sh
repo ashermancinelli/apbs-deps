@@ -14,6 +14,16 @@ __warn()
   __msg [Warning]
 }
 
+__error()
+{
+  __msg [Error]
+  while read line; do
+    __msg [Error] $line
+  done
+  __msg [Error]
+  exit 1
+}
+
 # Trap handler
 # Prints exit code if not 0
 __cleanup()
@@ -25,18 +35,6 @@ __cleanup()
   fi
   __msg Removing lock $global_lockfile
   [ -f $global_lockfile ] && rm $global_lockfile
-
-  echo '
-  If you were installing FETK and something failed or you cancelled 
-  the job, you may have to restore the original build script from the
-  backup.
-  
-  You most likely just have to run:
-
-  mv FETK/fetk-build.bk FETK/fetk-build
-
-  from the root directory of this repo.' | __warn
-
 }
 
 trap __cleanup 0 SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
@@ -67,7 +65,7 @@ __usage()
         Number of make jobs to build with
 
 EOD
-  exit 1
+  exit "${1:-1}"
 }
 
 # Is element $needle in array $haystack?
@@ -100,13 +98,32 @@ __find()
   return
 }
 
-# Replace with specific version if you need
-python=$(which python)
-if [[ -z "$python" ]]
-then
-  __msg Could not find python! Please ensure that python is in your PATH.
-fi
-export python
+__init_python()
+{
+  # Replace with specific version if you need
+  python=$(which python)
+  if [[ -z "$python" ]]
+  then
+    echo '
+    Could not find python!
+
+    Please ensure that python is in your PATH before attempting to build.
+    ' | __error
+  fi
+  export python
+
+  # Ensure sufficient numpy installation can be found
+  $python -c 'import numpy; import sys; sys.exit(0)'
+  if [[ "$?" != "0" ]]; then
+    echo '
+    Numpy is not installed!
+
+    Please install numpy before attempting to build.
+    ' | __error
+  fi
+}
+
+__init_python
 
 __realpath()
 {
@@ -115,6 +132,27 @@ import sys
 for p in sys.argv[1:]:
   print(os.path.realpath(p))' "$*"
 }
+
+__find_numpy()
+{
+  __msg Searching for numpy include directories.
+  local np_inc=$($python -c 'import numpy; print(numpy.get_include())')
+  if [[ "${np_inc:-unset}" == "unset" ]]; then
+    echo '
+    Could not find numpy include directory!
+
+    Please install numpy before attempting to build.
+    ' | __error
+  fi
+  
+  __msg Found numpy include at $np_inc
+  np_inc=$(__realpath $np_inc)
+  export C_INCLUDE_PATH=$np_inc
+  export CPATH=$np_inc
+  export NUMPY_INCLUDE_DIRECTORY=$np_inc
+}
+
+__find_numpy
 
 __msg Ensuring git submodules are initialized
 git submodule init

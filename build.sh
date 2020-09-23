@@ -14,7 +14,8 @@ for d in ${deps[@]}
 do
   builds[$d]=0
 done
-builds['all']=0
+builds[all]=0
+builds[clean]=0
 
 binname=$(basename "$0")
 
@@ -26,6 +27,7 @@ root=$(__realpath "$(dirname "$0")")
 # Ensure that build.sh is not running in two instances
 # trap handler will clean this up
 global_lockfile=$(__realpath ./$binname.lock)
+__msg Creating lockfile for $binname
 touch $global_lockfile
 
 export binname
@@ -41,6 +43,10 @@ parse_args()
   do
     arg="$1"
     case $arg in
+      --clean)
+        builds[clean]=1
+        shift
+        ;;
       --make-jobs=*)
         make_jobs=${arg/--make-jobs=/}
         shift
@@ -68,8 +74,12 @@ parse_args()
         prefix=${arg/--prefix=/}
         shift
         ;;
+      --prefix*)
+        prefix=$2
+        shift; shift
+        ;;
       -h|--help)
-        __usage
+        __usage 0
         ;;
       *)
         __msg Option not found!
@@ -83,17 +93,14 @@ parse_args()
 # shellcheck disable=SC2048 disable=SC2086
 parse_args $*
 
-builddir=$(__realpath ./build)
 installdir=$(__realpath ${prefix:-./install})
 make_jobs=${make_jobs:-8}
 default_cmake_args="-DCMAKE_INSTALL_PREFIX=$installdir"
 
-export builddir
 export installdir
 export make_jobs
 export default_cmake_args
 
-__msg Using build directory "$builddir"
 __msg Using install directory "$installdir"
 
 source shell/install_functions.sh
@@ -107,9 +114,21 @@ done
 
 __msg
 
+if [[ "${builds[clean]}" == "1" ]]; then
+  __msg Cleaning install directory...
+  # Just remove the lockfiles... That should be enough. Users can manually 
+  # remove the build directory if they really screw things up.
+  find $installdir -name '*.lock' -exec rm {} \;
+fi
+
+if [[ ! -d $installdir ]]; then
+  __msg Creating installation directory
+  mkdir -p $installdir
+fi
+
 for dep in ${deps[@]}
 do
-  if [[ ${builds['all']} == "1" ]] || [[ ${builds[$dep]} == "1" ]]
+  if [[ ${builds[all]} == "1" ]] || [[ ${builds[$dep]} == "1" ]]
   then
     __msg Building $dep
     eval "install_$dep"

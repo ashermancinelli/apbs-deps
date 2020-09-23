@@ -40,6 +40,8 @@ cat >>/dev/null <<EOD
     - Checking that the library has not already been installed
     - pulling any other sources needed by the library
     - documenting any of it's dependencies
+    - reverting any non-global changes to global variables (such as trap 
+      handlers)
 
 EOD
 
@@ -66,6 +68,18 @@ install_eigen3()
 
 install_FETK()
 {
+  # FETK needs it's own trap handler to deal with changes to the build script
+  __cleanup_FETK()
+  {
+    __msg Cleaning up changes to FETK build script
+    if [[ -f $root/FETK/fetk-build.bk ]]; then
+      rm $root/FETK/fetk-build
+      mv $root/FETK/fetk-build.bk $root/FETK/fetk-build
+    fi
+    __cleanup
+  }
+  trap __cleanup_FETK 0 SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
+
   __check_lock ${FUNCNAME[0]}
   if [ "$installed" == "1" ]; then
     return
@@ -78,15 +92,20 @@ install_FETK()
     -e "s@^FETK_PREFIX=@FETK_PREFIX=$installdir #@" \
     -e "s@^FETK_MAKE=@FETK_MAKE='make -j $make_jobs' #@" ./fetk-build
 
-  __msg Running FETK build script without confirmation
-  yes | ./fetk-build all
+  __msg Cleaning previous build
+  yes | ./fetk-build clean 
 
-  __msg Restoring original build script.
-  __msg You can find the modified build script at $(pwd)/fetk-build.bk
+  __msg Running FETK build script without confirmation
+  yes | ./fetk-build all 
+
+  __msg Restoring original FETK build script.
   rm ./fetk-build
   mv ./fetk-build.bk ./fetk-build
 
   popd
+
+  __msg Unsetting FETK-specific trap handler
+  trap __cleanup 0 SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
 
   __lock ${FUNCNAME[0]}
   __msg ${FUNCNAME[0]} successfully ran
