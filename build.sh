@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 get_version()
 {
@@ -109,7 +109,7 @@ linux*)
   ostype=linux
   ;;
 darwin*)
-  ostype=mac
+  ostype=darwin
   ;;
 *)
   echo '
@@ -120,7 +120,7 @@ darwin*)
 esac
 __msg Found $ostype environment
 
-packname="apbs-dependencies-$version-$(uname -i)-$ostype"
+packname="apbs-dependencies-$version-$(uname -m)-$ostype"
 [ -d $packname ] || mkdir $packname
 installdir=$(__realpath ./$packname)
 make_jobs=${make_jobs:-8}
