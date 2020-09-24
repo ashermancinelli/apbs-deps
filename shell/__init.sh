@@ -23,7 +23,7 @@ __block_msg()
 # Prints exit code if not 0
 __cleanup()
 {
-  local rc=$?
+  local rc=${?:-0}
   if [[ "$rc" != "0" ]]
   then
     __msg 'Got exit code: ' $rc

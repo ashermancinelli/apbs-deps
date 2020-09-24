@@ -1,7 +1,16 @@
 #!/bin/bash
 
-version=v3.0.0
-export version
+get_version()
+{
+  if [[ $(git show-ref | grep tags | wc -l) -gt 0 ]]; then
+    # Get tag from git ref if it exists
+    local tag=$(git show-ref | grep tags | head -n 1)
+    local tag=${tag##*/}
+  fi
+  local hash=$(git rev-parse HEAD)
+  export version=${tag:-$hash}
+}
+get_version
 
 # Use strict bash
 set -o errexit
@@ -121,6 +130,7 @@ done
 __msg "$( printf "%-20s : %20s" all $do_all )"
 __msg "$( printf "%-20s : %20s" clean $do_clean )"
 __msg "$( printf "%-20s : %20s" package $do_package )"
+__msg "$( printf "%-20s : %20s" version $version )"
 
 __msg
 __msg Press any key to continue or CTRL-C CTRL-C to quit...
