@@ -13,7 +13,7 @@ __check_lock()
   installed=0
   name=$1
 
-  local lockfile="$installdir/$name.lock"
+  local lockfile="$installdir/.$name.lock"
   if [ -f $lockfile ]; then
     __msg $name is already built!
     installed=1
@@ -29,7 +29,7 @@ __lock()
     __msg Must pass argument to ${FUNCNAME[0]}!
     exit 1
   fi
-  local lockfile="$installdir/$name.lock"
+  local lockfile="$installdir/.$name.lock"
   touch $lockfile
 }
 
@@ -61,11 +61,13 @@ install_eigen3()
   pushd $eigen
   cp -r unsupported $installdir/include/unsupported
   cp -r Eigen $installdir/include/Eigen
+  popd
 
   __lock ${FUNCNAME[0]}
   __msg ${FUNCNAME[0]} successfully ran
 }
 
+# Note: only maloc punc mc gamer are needed, so sg will not be built.
 install_FETK()
 {
   # FETK needs it's own trap handler to deal with changes to the build script
@@ -90,13 +92,15 @@ install_FETK()
   __msg Manually setting variables in FETK build script
   sed -i.bk \
     -e "s@^FETK_PREFIX=@FETK_PREFIX=$installdir #@" \
-    -e "s@^FETK_MAKE=@FETK_MAKE='make -j $make_jobs' #@" ./fetk-build
+    -e "s@^FETK_MAKE=@FETK_MAKE='make -j $make_jobs' #@" \
+    -e 's@^FETK_FLAGS=@FETK_FLAGS="--disable-triplet --without-dot --without-doxygen --without-x" #@' \
+    ./fetk-build
 
-  __msg Cleaning previous build
-  yes | ./fetk-build clean 
-
-  __msg Running FETK build script without confirmation
-  yes | ./fetk-build all 
+  # This build is extremely finicky
+  set +o errexit
+  __msg Running FETK build script without confirmation or error checking
+  yes | ./fetk-build maloc punc mc gamer
+  set -o errexit
 
   __msg Restoring original FETK build script.
   rm ./fetk-build
@@ -177,6 +181,7 @@ install_pybind11()
 
   cmake \
     $default_cmake_args \
+    -DPYBIND11_TEST=OFF \
     ..
   make -j $make_jobs
   make install
@@ -213,3 +218,33 @@ install_TABIPB()
   __msg ${FUNCNAME[0]} successfully ran
 }
 
+create_package()
+{
+  cd $root
+  __msg Creating package $packname from directory $installdir
+  pushd $installdir
+  [ -f activate.sh ] && rm activate.sh
+  cat >>activate.sh <<EOD
+
+# Save these values to deactivate later if need be
+export __APBS_OLD_LD_LIBRARY_PATH=\$LD_LIBRARY_PATH
+export __APBS_OLD_PATH=\$PATH
+
+# Many of these variables may be wrong!
+. ./fetk-env
+export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$(pwd)/lib:\$(pwd)/lib64
+export PATH=\$PATH:\$(pwd)/bin
+export pybind11_DIR=\$(pwd)/share/cmake/pybind11
+
+deactivate()
+{
+  export LD_LIBRARY_PATH=\$__APBS_OLD_LD_LIBRARY_PATH
+  export PATH=\$__APBS_OLD_PATH
+}
+
+EOD
+  chmod +x activate.sh
+  popd
+  tar -czvf "$packname.tar.gz" "$packname" 
+  __msg Package created successfully!
+}

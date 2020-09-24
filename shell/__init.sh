@@ -49,20 +49,28 @@ __usage()
 
     -h|--help 
 
-        Print this help message
+        Print this help message.
       
     --with-<dependency name>
 
         Build and install dependency <dependency name>, 
-        where <dependency name> is one of: [ all ${deps[*]} ]
+        where <dependency name> is one of: [ all ${deps[*]} ].
 
     --prefix=<prefix>
 
-        Installation prefix
+        Installation prefix.
+
+    --clean
+
+        Removes all files from the previous builds.
+
+    -P|--create-package
+
+        Create a tarball of the install if everything builds successfully.
 
     --make-jobs=<integer>
 
-        Number of make jobs to build with
+        Number of make jobs to build with.
 
 EOD
   exit "${1:-1}"

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+version=v3.0.0
+export version
+
 # Use strict bash
 set -o errexit
 set -o nounset
@@ -14,8 +17,9 @@ for d in ${deps[@]}
 do
   builds[$d]=0
 done
-builds[all]=0
-builds[clean]=0
+do_all=0
+do_clean=0
+do_package=0
 
 binname=$(basename "$0")
 
@@ -43,8 +47,12 @@ parse_args()
   do
     arg="$1"
     case $arg in
+      -P|--create-package)
+        do_package=1
+        shift
+        ;;
       --clean)
-        builds[clean]=1
+        do_clean=1
         shift
         ;;
       --make-jobs=*)
@@ -70,14 +78,6 @@ parse_args()
 
         shift
         ;;
-      --prefix=*)
-        prefix=${arg/--prefix=/}
-        shift
-        ;;
-      --prefix*)
-        prefix=$2
-        shift; shift
-        ;;
       -h|--help)
         __usage 0
         ;;
@@ -93,7 +93,9 @@ parse_args()
 # shellcheck disable=SC2048 disable=SC2086
 parse_args $*
 
-installdir=$(__realpath ${prefix:-./install})
+packname="apbs-dependencies-$version"
+[ -d $packname ] || mkdir $packname
+installdir=$(__realpath ./$packname)
 make_jobs=${make_jobs:-8}
 default_cmake_args="-DCMAKE_INSTALL_PREFIX=$installdir"
 
@@ -102,6 +104,10 @@ export make_jobs
 export default_cmake_args
 
 __msg Using install directory "$installdir"
+for d in lib lib64 include share bin; do
+  __msg Creating "$installdir/$d"
+  mkdir -p "$installdir/$d"
+done
 
 source shell/install_functions.sh
 
@@ -111,10 +117,16 @@ for bc in ${!builds[@]}
 do
   __msg "$( printf "%-20s : %20s" $bc ${builds[$bc]} )"
 done
+__msg "$( printf "%-20s : %20s" all $do_all )"
+__msg "$( printf "%-20s : %20s" clean $do_clean )"
+__msg "$( printf "%-20s : %20s" package $do_package )"
 
 __msg
+__msg Press any key to continue or CTRL-C to quit...
+__msg
+read
 
-if [[ "${builds[clean]}" == "1" ]]; then
+if [[ "$do_clean" = "1" ]]; then
   __msg Cleaning install directory...
   # Just remove the lockfiles... That should be enough. Users can manually 
   # remove the build directory if they really screw things up.
@@ -128,10 +140,16 @@ fi
 
 for dep in ${deps[@]}
 do
-  if [[ ${builds[all]} == "1" ]] || [[ ${builds[$dep]} == "1" ]]
+  if [[ "$do_all" == "1" ]] || [[ ${builds[$dep]} == "1" ]]
   then
     __msg Building $dep
     eval "install_$dep"
   fi
 done
 
+if [[ "$do_package" == "1" ]]; then
+  create_package
+fi
+
+__msg Done! Installation complete.
+exit 0
