@@ -109,6 +109,7 @@ install_FETK()
   popd
 
   __msg Unsetting FETK-specific trap handler
+  trap - 0 SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
   trap __cleanup 0 SIGHUP SIGINT SIGQUIT SIGABRT SIGTERM
 
   __lock ${FUNCNAME[0]}
@@ -117,6 +118,10 @@ install_FETK()
 
 install_geoflow_c()
 {
+  echo "
+  ${FUNCNAME[0]} is not currently supported! Use at your own risk.
+  " | fold -w 50 | __block_msg "Warning"
+
   __check_lock ${FUNCNAME[0]}
   if [ "$installed" == "1" ]; then
     return
@@ -143,6 +148,10 @@ install_geoflow_c()
 
 install_pb_solvers()
 {
+  echo "
+  ${FUNCNAME[0]} is not currently supported! Use at your own risk.
+  " | fold -w 50 | __block_msg "Warning"
+
   __check_lock ${FUNCNAME[0]}
   if [ "$installed" == "1" ]; then
     return
@@ -194,6 +203,10 @@ install_pybind11()
 
 install_TABIPB()
 {
+  echo "
+  ${FUNCNAME[0]} is not currently supported! Use at your own risk.
+  " | fold -w 50 | __block_msg "Warning"
+
   __check_lock ${FUNCNAME[0]}
   if [ "$installed" == "1" ]; then
     return
@@ -222,29 +235,10 @@ create_package()
 {
   cd $root
   __msg Creating package $packname from directory $installdir
-  pushd $installdir
-  [ -f activate.sh ] && rm activate.sh
-  cat >>activate.sh <<EOD
-
-# Save these values to deactivate later if need be
-export __APBS_OLD_LD_LIBRARY_PATH=\$LD_LIBRARY_PATH
-export __APBS_OLD_PATH=\$PATH
-
-# Many of these variables may be wrong!
-. ./fetk-env
-export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$(pwd)/lib:\$(pwd)/lib64
-export PATH=\$PATH:\$(pwd)/bin
-export pybind11_DIR=\$(pwd)/share/cmake/pybind11
-
-deactivate()
-{
-  export LD_LIBRARY_PATH=\$__APBS_OLD_LD_LIBRARY_PATH
-  export PATH=\$__APBS_OLD_PATH
-}
-
-EOD
-  chmod +x activate.sh
-  popd
   tar -czvf "$packname.tar.gz" "$packname" 
-  __msg Package created successfully!
+  echo "
+  Package created successfully!
+
+  Please find $packname.tar.gz in $root for the tarball.
+  " | fold -w 50 | __block_msg "Package"
 }

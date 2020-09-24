@@ -5,30 +5,25 @@ __msg()
   echo "($binname) -- $*"
 }
 
-__warn()
+# Same message format as `__msg`, but reads from stdin for longer-form block
+# messages.
+# @param[optional in] $1 Determines the prefix for all the messages to be
+# printed.
+__block_msg()
 {
-  __msg [Warning]
+  local msg=${1:-Note}
+  __msg [$msg]
   while read line; do
-    __msg [Warning] $line
+    __msg [$msg] $line
   done
-  __msg [Warning]
-}
-
-__error()
-{
-  __msg [Error]
-  while read line; do
-    __msg [Error] $line
-  done
-  __msg [Error]
-  exit 1
+  __msg [$msg]
 }
 
 # Trap handler
 # Prints exit code if not 0
 __cleanup()
 {
-  rc=$?
+  local rc=$?
   if [[ "$rc" != "0" ]]
   then
     __msg 'Got exit code: ' $rc
@@ -55,10 +50,6 @@ __usage()
 
         Build and install dependency <dependency name>, 
         where <dependency name> is one of: [ all ${deps[*]} ].
-
-    --prefix=<prefix>
-
-        Installation prefix.
 
     --clean
 
@@ -116,7 +107,7 @@ __init_python()
     Could not find python!
 
     Please ensure that python is in your PATH before attempting to build.
-    ' | __error
+    ' | __block_msg "Error"
   fi
   export python
 
@@ -127,7 +118,7 @@ __init_python()
     Numpy is not installed!
 
     Please install numpy before attempting to build.
-    ' | __error
+    ' | __block_msg "Error"
   fi
 }
 
@@ -150,7 +141,7 @@ __find_numpy()
     Could not find numpy include directory!
 
     Please install numpy before attempting to build.
-    ' | __error
+    ' | __block_msg "Error"
   fi
   
   __msg Found numpy include at $np_inc

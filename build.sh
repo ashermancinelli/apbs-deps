@@ -113,6 +113,7 @@ source shell/install_functions.sh
 
 __msg Build configuration:
 __msg
+__msg "$( printf "%-20s : %20s" Package Build? )"
 for bc in ${!builds[@]}
 do
   __msg "$( printf "%-20s : %20s" $bc ${builds[$bc]} )"
@@ -122,7 +123,7 @@ __msg "$( printf "%-20s : %20s" clean $do_clean )"
 __msg "$( printf "%-20s : %20s" package $do_package )"
 
 __msg
-__msg Press any key to continue or CTRL-C to quit...
+__msg Press any key to continue or CTRL-C CTRL-C to quit...
 __msg
 read
 
@@ -150,6 +151,51 @@ done
 if [[ "$do_package" == "1" ]]; then
   create_package
 fi
+
+generate_activate_script()
+{
+  local actscript=activate.sh
+  __msg Generating activation script:
+  pushd $installdir
+  [ -f "$actscript" ] && rm "$actscript"
+  cat >>"$actscript" <<EOD
+# Save these values to deactivate later if need be
+export __APBS_OLD_LD_LIBRARY_PATH=\$LD_LIBRARY_PATH
+export __APBS_OLD_PATH=\$PATH
+
+# Many of these variables may be wrong!
+. ./fetk-env
+export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$(pwd)/lib:\$(pwd)/lib64
+export PATH=\$PATH:\$(pwd)/bin
+export pybind11_DIR=\$(pwd)/share/cmake/pybind11
+
+deactivate()
+{
+export LD_LIBRARY_PATH=\$__APBS_OLD_LD_LIBRARY_PATH
+export PATH=\$__APBS_OLD_PATH
+}
+
+EOD
+  chmod +x "$actscript"
+  popd
+
+  echo "
+  See $installdir for installation. 
+
+  Run the following: 
+
+  prompt> cd $installdir
+  prompt> . $actscript
+
+  to activate environment, and run 
+  
+  prompt> deactivate
+
+  to deactivate the environment at any time.
+  " | fold -w 80 | __block_msg "Installation Note"
+}
+
+generate_activate_script
 
 __msg Done! Installation complete.
 exit 0
