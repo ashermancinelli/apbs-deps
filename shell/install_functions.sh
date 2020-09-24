@@ -120,7 +120,7 @@ install_geoflow_c()
 {
   echo "
   ${FUNCNAME[0]} is not currently supported! Use at your own risk.
-  " | fold -w 50 | __block_msg "Warning"
+  " | fold -s -w 80 | __block_msg "Warning"
 
   __check_lock ${FUNCNAME[0]}
   if [ "$installed" == "1" ]; then
@@ -150,7 +150,7 @@ install_pb_solvers()
 {
   echo "
   ${FUNCNAME[0]} is not currently supported! Use at your own risk.
-  " | fold -w 50 | __block_msg "Warning"
+  " | fold -s -w 80 | __block_msg "Warning"
 
   __check_lock ${FUNCNAME[0]}
   if [ "$installed" == "1" ]; then
@@ -205,7 +205,7 @@ install_TABIPB()
 {
   echo "
   ${FUNCNAME[0]} is not currently supported! Use at your own risk.
-  " | fold -w 50 | __block_msg "Warning"
+  " | fold -s -w 80 | __block_msg "Warning"
 
   __check_lock ${FUNCNAME[0]}
   if [ "$installed" == "1" ]; then
@@ -240,5 +240,5 @@ create_package()
   Package created successfully!
 
   Please find $packname.tar.gz in $root for the tarball.
-  " | fold -w 50 | __block_msg "Package"
+  " | fold -s -w 80 | __block_msg "Package"
 }

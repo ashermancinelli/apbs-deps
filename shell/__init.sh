@@ -11,12 +11,16 @@ __msg()
 # printed.
 __block_msg()
 {
-  local msg=${1:-Note}
-  __msg [$msg]
+  if [[ $# -eq 0 ]]; then
+    local msg=''
+  else
+    local msg="[ $* ]"
+  fi
+  __msg $msg
   while read line; do
-    __msg [$msg] $line
+    __msg $msg $line
   done
-  __msg [$msg]
+  __msg $msg
 }
 
 # Trap handler

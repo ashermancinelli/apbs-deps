@@ -102,7 +102,25 @@ parse_args()
 # shellcheck disable=SC2048 disable=SC2086
 parse_args $*
 
-packname="apbs-dependencies-$version"
+__msg Checking for OS type...
+
+case "$OSTYPE" in
+linux*)
+  ostype=linux
+  ;;
+darwin*)
+  ostype=mac
+  ;;
+*)
+  echo '
+  OS type not recognized! Only Mac and linux systems are supported right now.
+  ' | fold -s -w 80 | __block_msg Error
+  exit 1
+  ;;
+esac
+__msg Found $ostype environment
+
+packname="apbs-dependencies-$version-$(uname -i)-$ostype"
 [ -d $packname ] || mkdir $packname
 installdir=$(__realpath ./$packname)
 make_jobs=${make_jobs:-8}
@@ -120,17 +138,21 @@ done
 
 source shell/install_functions.sh
 
-__msg Build configuration:
-__msg
-__msg "$( printf "%-20s : %20s" Package Build? )"
+echo '
+Build configuration:' | __block_msg
+
 for bc in ${!builds[@]}
 do
-  __msg "$( printf "%-20s : %20s" $bc ${builds[$bc]} )"
-done
-__msg "$( printf "%-20s : %20s" all $do_all )"
-__msg "$( printf "%-20s : %20s" clean $do_clean )"
-__msg "$( printf "%-20s : %20s" package $do_package )"
-__msg "$( printf "%-20s : %20s" version $version )"
+  if [[ ${builds[$bc]} -eq 1 ]]; then printf '[x] '
+  else printf '[ ] '; fi
+  echo $bc
+done | __block_msg
+
+echo "all = $do_all
+clean = $do_clean
+build_package = $do_package
+package_name = $packname
+version = $version" | __block_msg
 
 __msg
 __msg Press any key to continue or CTRL-C CTRL-C to quit...
@@ -149,6 +171,7 @@ if [[ ! -d $installdir ]]; then
   mkdir -p $installdir
 fi
 
+# Calls installation functions from shell/install_functions.sh
 for dep in ${deps[@]}
 do
   if [[ "$do_all" == "1" ]] || [[ ${builds[$dep]} == "1" ]]
@@ -158,10 +181,12 @@ do
   fi
 done
 
+# tar's the install directory
 if [[ "$do_package" == "1" ]]; then
   create_package
 fi
 
+# creates script to set env vars to configure installation
 generate_activate_script()
 {
   local actscript=activate.sh
@@ -170,18 +195,21 @@ generate_activate_script()
   [ -f "$actscript" ] && rm "$actscript"
   cat >>"$actscript" <<EOD
 # Save these values to deactivate later if need be
+export __APBS_OLD_DYLD_LIBRARY_PATH=\$DYLD_LIBRARY_PATH
 export __APBS_OLD_LD_LIBRARY_PATH=\$LD_LIBRARY_PATH
 export __APBS_OLD_PATH=\$PATH
 
 # Many of these variables may be wrong!
 . ./fetk-env
 export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:\$(pwd)/lib:\$(pwd)/lib64
+export DYLD_LIBRARY_PATH=\$DYLD_LIBRARY_PATH:\$(pwd)/lib:\$(pwd)/lib64
 export PATH=\$PATH:\$(pwd)/bin
 export pybind11_DIR=\$(pwd)/share/cmake/pybind11
 
 deactivate()
 {
 export LD_LIBRARY_PATH=\$__APBS_OLD_LD_LIBRARY_PATH
+export DYLD_LIBRARY_PATH=\$__APBS_OLD_DYLD_LIBRARY_PATH
 export PATH=\$__APBS_OLD_PATH
 }
 
@@ -202,7 +230,7 @@ EOD
   prompt> deactivate
 
   to deactivate the environment at any time.
-  " | fold -w 80 | __block_msg "Installation Note"
+  " | fold -s -w 80 | __block_msg "Installation Note"
 }
 
 generate_activate_script
